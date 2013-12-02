@@ -168,4 +168,39 @@ describe TodosController do
     end
   end
 
+  describe "POST 'create'" do
+    context "Logged in" do
+      before :each do
+        @user = FactoryGirl.create :user
+        session[:user_id] = @user.id
+      end
+      it "redirects to todo#index if saved successfully" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo)
+        expect(response).to redirect_to(todos_path)
+      end
+      it "renders todo#new if failed to save" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo, name: nil)
+        expect(response).to render_template(:new)
+      end
+      it "saves successfully in database" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo)
+        expect(assigns[:todo]).to_not be_a_new(Todo)  
+      end
+      it "assigns updated todo to @todo" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo, name: "todo1")
+        expect(assigns[:todo].name).to eq("todo1")     
+      end
+      it "displays flash message on success" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo)
+        expect(flash[:notice]).to eq("Todo was created successfully")  
+      end
+    end
+    context "Not logged in" do
+      it "redirects to login page if user is not logged in" do
+        post 'create', todo: FactoryGirl.attributes_for(:todo)
+        expect(response).to redirect_to(new_session_path)
+      end
+    end
+  end
+
 end

@@ -22,6 +22,16 @@ class TodosController < ApplicationController
     redirect_to todos_path, notice: "#{@todo.name} was deleted successfully"
   end
 
+  def create
+    @todo = Todo.new(todo_params)
+    @todo.user = @user
+    if (@todo.save)
+      redirect_to todos_path, notice: "Todo was created successfully"
+    else
+      render :new
+    end
+  end
+
   protected
 
   def require_todo 
@@ -30,5 +40,9 @@ class TodosController < ApplicationController
 
   def require_user
     @user = current_user
+  end
+
+  def todo_params
+    params.require(:todo).permit(:name, :completed, :due_date)
   end
 end
