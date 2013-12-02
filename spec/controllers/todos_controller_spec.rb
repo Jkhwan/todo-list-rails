@@ -39,6 +39,9 @@ describe TodosController do
       it "renders index template if user is logged in" do
         expect(response).to render_template(:index)
       end
+      it "returns JSON formatted content" do
+
+      end
     end
 
     context "Assigns todos" do
@@ -55,6 +58,16 @@ describe TodosController do
       end
       it "is unable to see any todos that does not belong to current user" do
         expect(assigns(:todos)).to_not include(@others_todo)
+      end
+    end
+
+    context "JSON" do
+      it "returns JSON formatted content" do
+        @user = FactoryGirl.create :user
+        session[:user_id] = @user.id
+        @my_todo = FactoryGirl.create :todo, user: @user
+        get 'index', format: :json
+        expect(response.body).to include @my_todo.to_json
       end
     end
 
@@ -122,6 +135,16 @@ describe TodosController do
       end
     end
 
+    context "JSON" do
+      it "returns JSON formatted content" do
+        @user = FactoryGirl.create :user
+        session[:user_id] = @user.id
+        @todo = FactoryGirl.create :todo, user: @user
+        get 'show', id: @todo.id, format: :json
+        expect(response.body).to include @todo.to_json
+      end
+    end
+
     context "Authorization" do
       it "throws RecordNotFound if todos does not belong to current user" do
         @user = FactoryGirl.create :user
@@ -186,9 +209,10 @@ describe TodosController do
         post 'create', todo: FactoryGirl.attributes_for(:todo)
         expect(assigns[:todo]).to_not be_a_new(Todo)  
       end
-      it "assigns updated todo to @todo" do
+      it "assigns newly created todo to @todo" do
         post 'create', todo: FactoryGirl.attributes_for(:todo, name: "todo1")
         expect(assigns[:todo].name).to eq("todo1")     
+        expect(assigns[:todo].user).to eq(@user)
       end
       it "displays flash message on success" do
         post 'create', todo: FactoryGirl.attributes_for(:todo)
@@ -198,6 +222,46 @@ describe TodosController do
     context "Not logged in" do
       it "redirects to login page if user is not logged in" do
         post 'create', todo: FactoryGirl.attributes_for(:todo)
+        expect(response).to redirect_to(new_session_path)
+      end
+    end
+  end
+
+  describe "PATCH 'update'" do
+    context "Logged in" do
+      before :each do
+        @user = FactoryGirl.create :user
+        session[:user_id] = @user.id
+        @todo = FactoryGirl.create :todo, user: @user
+      end
+      it "redirects to todos#index if saved successfully" do
+        patch 'update', id: @todo.id, todo: { completed: true }
+        expect(response).to redirect_to todos_path
+      end
+      it "renders todo#edit if failed to save" do
+        patch 'update', id: @todo.id, todo: { name: nil }
+        expect(response).to render_template(:edit)
+      end
+      it "assigns updated todo to @todo" do
+        patch 'update', id: @todo.id, todo: { completed: true }
+        @todo.reload
+        expect(assigns[:todo].completed).to eq(true)
+        expect(assigns[:todo]).to eq(@todo)
+      end
+      it "displays flash message 'updated successfully' on success" do
+        patch 'update', id: @todo.id, todo: { completed: true }
+        expect(flash[:notice]).to eq("Todo was updated successfully")
+      end
+      it "display flash message 'update failed' on failure" do
+        patch 'update', id: @todo.id, todo: { name: nil }
+        expect(flash[:alert]).to eq("Failed to update todo")
+      end
+    end
+
+    context "Not logged in" do
+      it "redirects to login page if user is not logged in" do
+        @todo = FactoryGirl.create :todo
+        patch 'update', id: @todo.id
         expect(response).to redirect_to(new_session_path)
       end
     end
